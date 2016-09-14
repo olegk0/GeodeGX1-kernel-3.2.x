@@ -188,7 +188,7 @@ static __init struct pci_dev *gx_detect_chipset(void)
 	/* check if CPU is a MediaGX or a Geode. */
 	if ((boot_cpu_data.x86_vendor != X86_VENDOR_NSC) &&
 	    (boot_cpu_data.x86_vendor != X86_VENDOR_CYRIX)) {
-		pr_debug("error: no MediaGX/Geode processor found!\n");
+		printk("error: no MediaGX/Geode processor found!\n");
 		return NULL;
 	}
 
@@ -198,7 +198,7 @@ static __init struct pci_dev *gx_detect_chipset(void)
 			return gx_pci;
 	}
 
-	pr_debug("error: no supported chipset found!\n");
+	printk("error: no supported chipset found!\n");
 	return NULL;
 }
 
@@ -302,7 +302,7 @@ static void gx_set_cpuspeed(unsigned int khz)
 			break;
 		default:
 			local_irq_restore(flags);
-			pr_debug("fatal: try to set unknown chipset.\n");
+			printk("fatal: try to set unknown chipset.\n");
 			return;
 		}
 	} else {
@@ -312,6 +312,8 @@ static void gx_set_cpuspeed(unsigned int khz)
 		pr_debug("suspend modulation disabled: cpu runs 100%% speed.\n");
 	}
 
+	gx_params->off_duration = 200;
+	gx_params->on_duration = 1;
 	gx_write_byte(PCI_MODOFF, gx_params->off_duration);
 	gx_write_byte(PCI_MODON, gx_params->on_duration);
 
@@ -324,8 +326,8 @@ static void gx_set_cpuspeed(unsigned int khz)
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
-	pr_debug("suspend modulation w/ duration of ON:%d us, OFF:%d us\n",
-		gx_params->on_duration * 32, gx_params->off_duration * 32);
+	pr_debug("suspend modulation w/ duration of ON:%d us, OFF:%d us pmer:0x%X  suscfg:0x%X\n",
+		gx_params->on_duration * 32, gx_params->off_duration * 32, pmer1,suscfg);
 	pr_debug("suspend modulation w/ clock speed: %d kHz.\n", freqs.new);
 }
 
@@ -416,17 +418,19 @@ static int cpufreq_gx_cpu_init(struct cpufreq_policy *policy)
 
 	/* determine maximum frequency */
 	if (pci_busclk)
-		maxfreq = pci_busclk * gx_freq_mult[getCx86(CX86_DIR1) & 0x0f];
+		maxfreq = pci_busclk * gx_freq_mult[getCx86(CX86_DIR0) & 0x0f];
 	else if (cpu_khz)
 		maxfreq = cpu_khz;
 	else
-		maxfreq = 30000 * gx_freq_mult[getCx86(CX86_DIR1) & 0x0f];
+		maxfreq = 30000 * gx_freq_mult[getCx86(CX86_DIR0) & 0x0f];
 
 	stock_freq = maxfreq;
 	curfreq = gx_get_cpuspeed(0);
 
-	pr_debug("cpu max frequency is %d.\n", maxfreq);
-	pr_debug("cpu current frequency is %dkHz.\n", curfreq);
+	printk("cpu DIR0:0x%X DIR1:0x%X.\n", getCx86(CX86_DIR0), getCx86(CX86_DIR1));
+
+	printk("cpu max frequency is %d.\n", maxfreq);
+	printk("cpu current frequency is %dkHz.\n", curfreq);
 
 	/* setup basic struct for cpufreq API */
 	policy->cpu = 0;
@@ -462,6 +466,8 @@ static int __init cpufreq_gx_init(void)
 	int ret;
 	struct gxfreq_params *params;
 	struct pci_dev *gx_pci;
+	unsigned long flags;
+	u8 ccr2;
 
 	/* Test if we have the right hardware */
 	gx_pci = gx_detect_chipset();
@@ -472,7 +478,10 @@ static int __init cpufreq_gx_init(void)
 	if (max_duration > 0xff)
 		max_duration = 0xff;
 
-	pr_debug("geode suspend modulation available.\n");
+	local_irq_save(flags);
+	ccr2 = getCx86(CX86_CCR2);
+	local_irq_restore(flags);
+	printk("geode suspend modulation available, CCR2:0x%X.\n",ccr2);
 
 	params = kzalloc(sizeof(struct gxfreq_params), GFP_KERNEL);
 	if (params == NULL)

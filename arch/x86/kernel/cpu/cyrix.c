@@ -114,14 +114,15 @@ static void __cpuinit check_cx686_slop(struct cpuinfo_x86 *c)
 
 static void __cpuinit set_cx86_reorder(void)
 {
-	u8 ccr3;
+	u8 ccr3, t;
 
 	printk(KERN_INFO "Enable Memory access reorder on Cyrix/NSC processor.\n");
 	ccr3 = getCx86(CX86_CCR3);
 	setCx86(CX86_CCR3, (ccr3 & 0x0f) | 0x10); /* enable MAPEN */
 
 	/* Load/Store Serialize to mem access disable (=reorder it) */
-	setCx86_old(CX86_PCR0, getCx86_old(CX86_PCR0) & ~0x80);
+	t = getCx86(CX86_PCR0);
+	setCx86(CX86_PCR0, t  & ~0x80);
 	/* set load/store serialize from 1GB to 4GB */
 	ccr3 |= 0xe0;
 	setCx86(CX86_CCR3, ccr3);
@@ -129,14 +130,17 @@ static void __cpuinit set_cx86_reorder(void)
 
 static void __cpuinit set_cx86_memwb(void)
 {
+	u8 t;
 	printk(KERN_INFO "Enable Memory-Write-back mode on Cyrix/NSC processor.\n");
 
 	/* CCR2 bit 2: unlock NW bit */
-	setCx86_old(CX86_CCR2, getCx86_old(CX86_CCR2) & ~0x04);
+	t = getCx86(CX86_CCR2);
+	setCx86(CX86_CCR2, t & ~0x04);
 	/* set 'Not Write-through' */
 	write_cr0(read_cr0() | X86_CR0_NW);
 	/* CCR2 bit 2: lock NW bit and set WT1 */
-	setCx86_old(CX86_CCR2, getCx86_old(CX86_CCR2) | 0x14);
+	t = getCx86(CX86_CCR2);
+	setCx86(CX86_CCR2, t | 0x14);
 }
 
 /*
@@ -146,18 +150,21 @@ static void __cpuinit set_cx86_memwb(void)
 static void __cpuinit geode_configure(void)
 {
 	unsigned long flags;
-	u8 ccr3;
+	u8 ccr3, t;
 	local_irq_save(flags);
 
 	/* Suspend on halt power saving and enable #SUSP pin */
-	setCx86_old(CX86_CCR2, getCx86_old(CX86_CCR2) | 0x88);
+	t = getCx86(CX86_CCR2);
+	setCx86(CX86_CCR2, t | 0x88);
+	printk(KERN_INFO "Suspend on halt power saving and enable #SUSP pin (Cyrix/NSC processor) 0x%X.\n",t);
 
 	ccr3 = getCx86(CX86_CCR3);
 	setCx86(CX86_CCR3, (ccr3 & 0x0f) | 0x10);	/* enable MAPEN */
 
 
 	/* FPU fast, DTE cache, Mem bypass */
-	setCx86_old(CX86_CCR4, getCx86_old(CX86_CCR4) | 0x38);
+	t = getCx86(CX86_CCR4);
+	setCx86(CX86_CCR4, t | 0x38);
 	setCx86(CX86_CCR3, ccr3);			/* disable MAPEN */
 
 	set_cx86_memwb();
@@ -190,6 +197,7 @@ static void __cpuinit init_cyrix(struct cpuinfo_x86 *c)
 	unsigned char dir0, dir0_msn, dir0_lsn, dir1 = 0;
 	char *buf = c->x86_model_id;
 	const char *p = NULL;
+	u8 t;
 
 	/*
 	 * Bit 31 in normal CPUID used for nonstandard 3DNow ID;
@@ -292,7 +300,8 @@ static void __cpuinit init_cyrix(struct cpuinfo_x86 *c)
 		/* GXm supports extended cpuid levels 'ala' AMD */
 		if (c->cpuid_level == 2) {
 			/* Enable cxMMX extensions (GX1 Datasheet 54) */
-			setCx86_old(CX86_CCR7, getCx86_old(CX86_CCR7) | 1);
+			t = getCx86(CX86_CCR7);
+			setCx86(CX86_CCR7, t | 1);
 
 			/*
 			 * GXm : 0x30 ... 0x5f GXm  datasheet 51
@@ -315,7 +324,8 @@ static void __cpuinit init_cyrix(struct cpuinfo_x86 *c)
 		if (dir1 > 7) {
 			dir0_msn++;  /* M II */
 			/* Enable MMX extensions (App note 108) */
-			setCx86_old(CX86_CCR7, getCx86_old(CX86_CCR7)|1);
+			t = getCx86(CX86_CCR7);
+			setCx86(CX86_CCR7, t |1);
 		} else {
 			c->coma_bug = 1;      /* 6x86MX, it has the bug. */
 		}
@@ -406,6 +416,7 @@ static inline int test_cyrix_52div(void)
 
 static void __cpuinit cyrix_identify(struct cpuinfo_x86 *c)
 {
+	u8 t;
 	/* Detect Cyrix with disabled CPUID */
 	if (c->x86 == 4 && test_cyrix_52div()) {
 		unsigned char dir0, dir1;
@@ -432,7 +443,8 @@ static void __cpuinit cyrix_identify(struct cpuinfo_x86 *c)
 			/* enable MAPEN  */
 			setCx86(CX86_CCR3, (ccr3 & 0x0f) | 0x10);
 			/* enable cpuid  */
-			setCx86_old(CX86_CCR4, getCx86_old(CX86_CCR4) | 0x80);
+			t = getCx86(CX86_CCR4);
+			setCx86(CX86_CCR4, t | 0x80);
 			/* disable MAPEN */
 			setCx86(CX86_CCR3, ccr3);
 			local_irq_restore(flags);

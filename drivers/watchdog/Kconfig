@@ -396,6 +396,12 @@ config ADVANTECH_WDT
 	  feature. More information can be found at
 	  <http://www.advantech.com.tw/products/>
 
+config ADVANTECH_WDT_BOOT
+	bool "WDT Starting early"
+	depends on ADVANTECH_WDT
+	help
+	 WDT Starting early in the boot process.
+
 config ALIM1535_WDT
 	tristate "ALi M1535 PMU Watchdog Timer"
 	depends on X86 && PCI

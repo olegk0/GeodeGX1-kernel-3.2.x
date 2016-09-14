@@ -1,0 +1,5 @@
+
+make ARCH=i386 modules
+make ARCH=i386 modules_install INSTALL_MOD_PATH=out
+make ARCH=i386 firmware_install INSTALL_MOD_PATH=out
+

@@ -207,7 +207,8 @@ static int advwdt_close(struct inode *inode, struct file *file)
 	if (adv_expect_close == 42) {
 		advwdt_disable();
 	} else {
-//		printk(KERN_CRIT PFX "Unexpected close, not stopping watchdog!\n");
+		printk(KERN_CRIT PFX
+				"Unexpected close, not stopping watchdog!\n");
 		advwdt_ping();
 	}
 	clear_bit(0, &advwdt_is_open);
@@ -277,9 +278,6 @@ static int __devinit advwdt_probe(struct platform_device *dev)
 	}
 	printk(KERN_INFO PFX "initialized. timeout=%d sec (nowayout=%d)\n",
 		timeout, nowayout);
-#ifdef CONFIG_ADVANTECH_WDT_BOOT
-	advwdt_ping();
-#endif
 out:
 	return ret;
 unreg_regions:
@@ -348,25 +346,8 @@ static void __exit advwdt_exit(void)
 	printk(KERN_INFO PFX "Watchdog Module Unloaded.\n");
 }
 
-#ifdef CONFIG_ADVANTECH_WDT_BOOT
-
-static int __init advwdt_on_boot(void)
-{
-	if (!request_region(wdt_start, 1, WATCHDOG_NAME)) {
-		printk(KERN_ERR PFX "I/O address 0x%04x already in use\n", wdt_start);
-		return -EIO;
-	}
-	advwdt_ping();
-	printk(KERN_INFO "WDT driver for Advantech single board computer - WDT timer is started!\n");
-	release_region(wdt_start, 1);
-
-	return 0;
-}
-
-core_initcall(advwdt_on_boot);
-#endif
-
-module_init(advwdt_init);
+//module_init(advwdt_init);
+postcore_initcall(advwdt_init);
 module_exit(advwdt_exit);
 
 MODULE_LICENSE("GPL");

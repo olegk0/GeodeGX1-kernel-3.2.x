@@ -170,6 +170,8 @@ static int __devinit snd_cs5530_create(struct snd_card *card,
 	irq = snd_cs5530_mixer_read(sb_base, 0x80) & 0x0F;
 	dma8 = snd_cs5530_mixer_read(sb_base, 0x81);
 
+	printk(KERN_INFO "CS5530: irq:0x%X dma:0x%X\n", irq,dma8);
+
 	if (dma8 & 0x20)
 		dma16 = 5;
 	else if (dma8 & 0x40)
